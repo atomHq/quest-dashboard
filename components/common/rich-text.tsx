@@ -17,7 +17,8 @@ export function RichText({ value, className }: { value: string; className?: stri
   }, [value, mounted])
 
   const base = cn(
-    'text-sm leading-relaxed text-muted-foreground [&_a]:text-primary [&_a]:underline [&_h2]:mt-4 [&_h2]:text-base [&_h2]:font-semibold [&_h2]:text-foreground [&_li]:my-0.5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:my-2 [&_strong]:text-foreground [&_ul]:list-disc [&_ul]:pl-5 [&_blockquote]:border-l-2 [&_blockquote]:pl-3',
+    // Code blocks and long unbroken strings (URLs, &nbsp; runs) must wrap, or they spill past the column.
+    'min-w-0 break-words text-sm leading-relaxed text-muted-foreground [&_pre]:my-2 [&_pre]:rounded-lg [&_pre]:bg-muted/50 [&_pre]:p-3 [&_pre]:whitespace-pre-wrap [&_pre]:break-words [&_code]:break-words [&_a]:text-primary [&_a]:underline [&_h2]:mt-4 [&_h2]:text-base [&_h2]:font-semibold [&_h2]:text-foreground [&_li]:my-0.5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:my-2 [&_strong]:text-foreground [&_ul]:list-disc [&_ul]:pl-5 [&_blockquote]:border-l-2 [&_blockquote]:pl-3',
     className,
   )
   if (html === null) {
