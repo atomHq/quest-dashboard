@@ -37,6 +37,9 @@ export function DepositCallback() {
   const wallet = useWallet({ refetchInterval: phase === 'polling' ? POLL_MS : false })
   const available = wallet.data?.available
 
+  // Where to go once the credit lands: the create draft wins, then whatever the top-up was started from.
+  const returnTo = ctx?.draft ? '/dashboard/challenges/new?step=4' : (ctx?.pending?.returnTo ?? null)
+
   // What balance counts as "the deposit has landed"?
   const target = !ctx
     ? null
@@ -57,10 +60,12 @@ export function DepositCallback() {
       if (ctx?.draft) {
         saveDraft({ ...ctx.draft, step: 4, awaitingFunding: undefined })
         toast.success('Wallet funded — you can create your challenge now.')
-        setTimeout(() => router.replace('/dashboard/challenges/new?step=4'), 1200)
+      } else if (ctx?.pending?.purpose === 'join') {
+        toast.success('Wallet funded — confirm to join the challenge.')
       }
+      if (returnTo) setTimeout(() => router.replace(returnTo), 1200)
     }
-  }, [available, target, phase, ctx, queryClient, router])
+  }, [available, target, phase, ctx, queryClient, router, returnTo])
 
   useEffect(() => {
     if (phase !== 'polling') return
@@ -110,9 +115,9 @@ export function DepositCallback() {
               Available balance: <span className="money text-foreground">{formatNaira(available)}</span>
             </p>
           )}
-          {ctx?.draft ? (
+          {returnTo ? (
             <p className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="size-4 animate-spin" /> Taking you back to your challenge…
+              <Loader2 className="size-4 animate-spin" /> Taking you back to the challenge…
             </p>
           ) : (
             <Link href="/wallet" className={buttonVariants({ className: 'mt-2' })}>
@@ -141,9 +146,9 @@ export function DepositCallback() {
             >
               Check again
             </Button>
-            {ctx?.draft ? (
-              <Link href="/dashboard/challenges/new?step=4" className={buttonVariants()}>
-                Back to my challenge
+            {returnTo ? (
+              <Link href={returnTo} className={buttonVariants()}>
+                Back to the challenge
               </Link>
             ) : (
               <Link href="/wallet" className={buttonVariants()}>

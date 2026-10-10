@@ -36,7 +36,7 @@ import { EmptyState, ErrorState, FormError, StatusBadge } from '@/components/com
 import { Field } from '@/components/common/field'
 import { RichTextEditor } from '@/components/common/rich-text-editor'
 import { Countdown, ParticipantsCount } from '@/components/challenge/challenge-card'
-import { EscrowBadge, RewardTiers } from '@/components/challenge/reward-tiers'
+import { EntryBadge, EscrowBadge, RewardTiers, isPaidChallenge } from '@/components/challenge/reward-tiers'
 import { SubmissionCard, SubmissionGridSkeleton, SubmissionModal } from '@/components/challenge/submissions'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -566,20 +566,43 @@ function ApprovedSubmissions({ c }: { c: Challenge }) {
 // ---------------------------------------------------------------------------
 
 function Sidebar({ data }: { data: ChallengeDetail }) {
-  const { challenge: c, reward_tiers, escrow_summary } = data
+  const { challenge: c, reward_tiers, escrow_summary, entry_summary } = data
+  const paid = isPaidChallenge(c)
   return (
     <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
       <div className="space-y-4 rounded-xl border bg-card p-5">
         <div>
-          <p className="text-xs tracking-wide text-muted-foreground uppercase">Reward pool</p>
+          <p className="text-xs tracking-wide text-muted-foreground uppercase">{paid && c.status === 'active' ? 'Pool so far' : 'Reward pool'}</p>
           <p className="money text-3xl font-semibold text-primary">{formatNaira(c.reward_pool_amount)}</p>
         </div>
-        <EscrowBadge summary={escrow_summary} />
+        <div className="flex flex-wrap items-center gap-2">
+          <EscrowBadge summary={paid ? undefined : escrow_summary} />
+          <EntryBadge c={c} />
+        </div>
         <div className="grid gap-2 border-t pt-4 text-sm">
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Platform fee</span>
-            <span className="money">{formatNaira(escrow_summary.platform_fee_amount)}</span>
-          </div>
+          {paid ? (
+            <>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Entry price</span>
+                <span className="money">{formatNaira(c.entry_price!)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Platform fee per entry</span>
+                <span className="money">{formatNaira(entry_summary?.platform_fee_per_entry ?? c.entry_platform_fee)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Pool per entry</span>
+                <span className="money">
+                  {formatNaira(entry_summary?.pool_per_entry ?? Math.max(0, c.entry_price! - c.entry_platform_fee))}
+                </span>
+              </div>
+            </>
+          ) : (
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Platform fee</span>
+              <span className="money">{formatNaira(escrow_summary.platform_fee_amount)}</span>
+            </div>
+          )}
           <div className="flex justify-between">
             <span className="text-muted-foreground">Participants</span>
             <ParticipantsCount c={c} />

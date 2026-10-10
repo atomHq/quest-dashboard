@@ -8,9 +8,17 @@ export interface PendingDeposit {
   amount: number
   /** wallet.available when the user left for Paystack, to detect the credit on return. */
   startAvailable: number
-  purpose: 'wallet' | 'challenge'
+  purpose: 'wallet' | 'challenge' | 'join'
+  /** Where to send the user once the credit lands (e.g. back to the paid challenge they were joining). */
+  returnTo?: string
   reference?: string
   createdAt: number
+}
+
+/** Paystack won't take tiny charges; round the shortfall up to whole naira with a ₦100 floor. */
+export const MIN_TOPUP_KOBO = 10_000
+export function topUpAmount(shortfallKobo: number) {
+  return Math.max(Math.ceil(shortfallKobo / 100) * 100, MIN_TOPUP_KOBO)
 }
 
 export function getPendingDeposit() {
@@ -29,6 +37,7 @@ export async function startDeposit(opts: {
   amount: number
   startAvailable: number
   purpose: PendingDeposit['purpose']
+  returnTo?: string
   idempotencyKey?: string
 }) {
   const existing = getPendingDeposit()
@@ -43,6 +52,7 @@ export async function startDeposit(opts: {
     amount: opts.amount,
     startAvailable: opts.startAvailable,
     purpose: opts.purpose,
+    returnTo: opts.returnTo,
     createdAt: Date.now(),
   }
   writeJSON(KEY, pending)

@@ -34,6 +34,20 @@ const STEP_FOR_CODE: Record<string, Step> = {
   INVALID_PERCENTAGES: 3,
   DUPLICATE_RANK: 3,
   NO_REWARD_TIERS: 3,
+  INVALID_FUNDING_TYPE: 3,
+  INVALID_ENTRY_PRICE: 3,
+  ENTRY_PRICE_TOO_LOW: 3,
+  PAID_REWARD_POOL: 3,
+  PAID_DRAFT: 3,
+}
+
+/** Field to highlight for a code-only error, when it isn't the step's default. */
+const FIELD_FOR_CODE: Record<string, string> = {
+  INVALID_FUNDING_TYPE: 'funding_type',
+  INVALID_ENTRY_PRICE: 'entry_price_naira',
+  ENTRY_PRICE_TOO_LOW: 'entry_price_naira',
+  PAID_REWARD_POOL: 'funding_type',
+  PAID_DRAFT: 'funding_type',
 }
 
 const STEP_FOR_FIELD: Record<string, { step: Step; field: string }> = {
@@ -48,6 +62,8 @@ const STEP_FOR_FIELD: Record<string, { step: Step; field: string }> = {
   deadline: { step: 2, field: 'deadline' },
   reward_pool_amount: { step: 3, field: 'pool_naira' },
   reward_tiers: { step: 3, field: 'tiers' },
+  funding_type: { step: 3, field: 'funding_type' },
+  entry_price: { step: 3, field: 'entry_price_naira' },
 }
 
 function Stepper({ step, maxReached, onJump }: { step: Step; maxReached: Step; onJump: (s: Step) => void }) {
@@ -95,10 +111,18 @@ function Success({ detail }: { detail: ChallengeDetail }) {
         <PartyPopper className="size-8" />
       </motion.span>
       <h2 className="text-2xl font-semibold">Your challenge is live</h2>
-      <p className="text-muted-foreground">
-        <span className="money text-primary">{formatNaira(detail.escrow_summary.total_charge_amount)}</span> is now held in
-        escrow for “{c.title}”.
-      </p>
+      {detail.entry_summary ? (
+        <p className="text-muted-foreground">
+          Entrants pay <span className="money text-primary">{formatNaira(detail.entry_summary.entry_price)}</span> to join “
+          {c.title}”. Each entry adds{' '}
+          <span className="money text-primary">{formatNaira(detail.entry_summary.pool_per_entry)}</span> to the prize pool.
+        </p>
+      ) : (
+        <p className="text-muted-foreground">
+          <span className="money text-primary">{formatNaira(detail.escrow_summary.total_charge_amount)}</span> is now held in
+          escrow for “{c.title}”.
+        </p>
+      )}
       <div className="flex gap-2">
         <Link href={`/dashboard/challenges/${c.id}`} className={buttonVariants()}>
           Manage challenge
@@ -170,7 +194,7 @@ export function CreateChallengeWizard() {
       const byField = err.field ? STEP_FOR_FIELD[err.field] : undefined
       const step = byCode ?? byField?.step
       if (step) {
-        setStepErrors({ [step]: { message: errorMessage(err), field: byField?.field ?? (step === 2 ? 'deadline' : 'tiers') } })
+        setStepErrors({ [step]: { message: errorMessage(err), field: byField?.field ?? FIELD_FOR_CODE[err.code] ?? (step === 2 ? 'deadline' : 'tiers') } })
         goTo(step)
       }
     },

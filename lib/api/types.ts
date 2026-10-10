@@ -4,6 +4,8 @@ export type ChallengeStatus = 'draft' | 'active' | 'closed' | 'judging' | 'compl
 export type SubmissionType = 'video' | 'audio' | 'image' | 'written'
 export type ChallengeType = 'public' | 'direct'
 export type WinnerSelection = 'creator' | 'community' | 'hybrid'
+/** creator_funded: the creator escrows the pool up front. entry_funded: each entrant pays entry_price from their wallet. */
+export type FundingType = 'creator_funded' | 'entry_funded'
 
 export interface Challenge {
   id: string
@@ -27,6 +29,11 @@ export interface Challenge {
   completed_at: string | null
   created_at: string
   updated_at: string
+  funding_type: FundingType
+  /** Set only for entry_funded challenges. */
+  entry_price: number | null
+  /** Platform fee kept from each entry; 0 for creator_funded. */
+  entry_platform_fee: number
 }
 
 export interface RewardTier {
@@ -48,10 +55,19 @@ export interface EscrowSummary {
   fee_percentage: number
 }
 
+/** What one entry to a paid challenge costs and where it goes. */
+export interface EntrySummary {
+  entry_price: number
+  platform_fee_per_entry: number
+  pool_per_entry: number
+}
+
 export interface ChallengeDetail {
   challenge: Challenge
   reward_tiers: RewardTier[]
   escrow_summary: EscrowSummary
+  /** Set for entry_funded challenges. */
+  entry_summary?: EntrySummary | null
 }
 
 export interface Profile {
@@ -211,6 +227,8 @@ export interface CreateChallengeInput {
   submission_type: SubmissionType
   winner_selection: WinnerSelection
   reward_pool_amount: number
+  funding_type?: FundingType
+  entry_price?: number
   max_participants: number | null
   deadline: string
   reward_tiers: { rank: number; percentage: number }[]

@@ -201,8 +201,8 @@ export function useProfile(username: string) {
 }
 
 /**
- * BACKEND GAP: GET /users/me/challenges isn't routed yet. A 404 resolves to an empty list so the
- * dashboard shows its empty state, and starts working as soon as the route ships.
+ * Challenges the current user created. A 404 (backend deployed without GET /users/me/challenges)
+ * resolves to an empty list so the dashboard shows its empty state instead of an error.
  */
 export function useMyChallenges() {
   return useQuery({

@@ -2,9 +2,10 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Banknote, CheckCircle2, ExternalLink, Flag, Lock, Plus, Rocket, Settings2 } from 'lucide-react'
+import { Banknote, CheckCircle2, Compass, ExternalLink, Flag, Lock, Plus, Rocket, Settings2 } from 'lucide-react'
 import { formatNaira } from '@/lib/money'
-import { useMyChallenges, useWallet } from '@/hooks/queries'
+import { useJoined, useMyChallenges, useWallet } from '@/hooks/queries'
+import type { ChallengeStatus, JoinedChallenge } from '@/lib/api/types'
 import { EmptyState, ErrorState, PageHeader, StatusBadge } from '@/components/common'
 import { Countdown, ParticipantsCount } from '@/components/challenge/challenge-card'
 import { StatCard } from '@/components/wallet/wallet-view'
@@ -14,6 +15,81 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 
 function Dash() {
   return <span className="money text-muted-foreground">—</span>
+}
+
+const PARTICIPANT_LABEL: Record<JoinedChallenge['participant_status'], string> = {
+  joined: 'Joined',
+  submitted: 'Entry submitted',
+  disqualified: 'Disqualified',
+  withdrawn: 'Withdrawn',
+}
+
+/** Still running or awaiting results — finished and cancelled ones drop off. */
+const IN_PROGRESS: ChallengeStatus[] = ['active', 'closed', 'judging']
+
+function Participating() {
+  const router = useRouter()
+  const joined = useJoined()
+  const items = (joined.data ?? []).filter((c) => IN_PROGRESS.includes(c.status) && c.participant_status !== 'withdrawn')
+
+  return (
+    <div className="rounded-xl border bg-card">
+      <div className="border-b p-4">
+        <h2 className="font-medium">Participating</h2>
+      </div>
+      {joined.isPending ? (
+        <div className="grid gap-2 p-4">
+          {Array.from({ length: 3 }, (_, i) => (
+            <Skeleton key={i} className="h-12 w-full" />
+          ))}
+        </div>
+      ) : joined.isError ? (
+        <ErrorState error={joined.error} onRetry={() => joined.refetch()} className="m-4" />
+      ) : items.length === 0 ? (
+        <EmptyState
+          icon={Compass}
+          title="You're not in any active challenges"
+          description="Join a challenge and it'll show up here until results are in."
+          className="m-4 border-0"
+          action={
+            <Link href="/" className={buttonVariants({ variant: 'outline' })}>
+              Browse challenges
+            </Link>
+          }
+        />
+      ) : (
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="pl-4">Challenge</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="hidden sm:table-cell">Your entry</TableHead>
+              <TableHead className="pr-4 hidden md:table-cell">Deadline</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {items.map((c) => (
+              <TableRow key={c.id} className="cursor-pointer" onClick={() => router.push(`/challenges/${c.id}`)}>
+                <TableCell className="pl-4">
+                  <p className="max-w-[18rem] truncate font-medium">{c.title}</p>
+                  <p className="money text-xs text-primary">{formatNaira(c.reward_pool_amount)}</p>
+                </TableCell>
+                <TableCell>
+                  <StatusBadge status={c.status} />
+                </TableCell>
+                <TableCell className="hidden text-xs text-muted-foreground sm:table-cell">
+                  {PARTICIPANT_LABEL[c.participant_status]}
+                </TableCell>
+                <TableCell className="hidden pr-4 text-xs md:table-cell">
+                  <Countdown deadline={c.deadline} />
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )}
+    </div>
+  )
 }
 
 export function DashboardView() {
@@ -28,8 +104,8 @@ export function DashboardView() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Creator dashboard"
-        description="Track your challenges, escrow and payouts."
+        title="Dashboard"
+        description="Manage your challenges and keep up with the ones you've joined."
         actions={
           <Link href="/dashboard/challenges/new" className={buttonVariants()}>
             <Plus /> New challenge
@@ -125,6 +201,8 @@ export function DashboardView() {
           </Table>
         )}
       </div>
+
+      <Participating />
     </div>
   )
 }

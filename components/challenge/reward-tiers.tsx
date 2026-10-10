@@ -1,7 +1,7 @@
-import { Lock, Medal } from 'lucide-react'
+import { Gift, Lock, Medal, Ticket } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatNaira } from '@/lib/money'
-import type { EscrowSummary, RewardTier } from '@/lib/api/types'
+import type { Challenge, EscrowSummary, RewardTier } from '@/lib/api/types'
 
 const RANK_STYLE = ['text-primary', 'text-zinc-300', 'text-amber-600']
 
@@ -26,7 +26,8 @@ export function RewardTiers({ tiers, className }: { tiers: RewardTier[]; classNa
   )
 }
 
-export function EscrowBadge({ summary, className }: { summary: EscrowSummary; className?: string }) {
+/** Pass `summary` only to the creator — everyone else sees that funds are escrowed, not how much. */
+export function EscrowBadge({ summary, className }: { summary?: EscrowSummary; className?: string }) {
   return (
     <span
       className={cn(
@@ -35,7 +36,40 @@ export function EscrowBadge({ summary, className }: { summary: EscrowSummary; cl
       )}
     >
       <Lock className="size-3" />
-      <span className="money">{formatNaira(summary.total_charge_amount)}</span> in escrow
+      {summary ? (
+        <>
+          <span className="money">{formatNaira(summary.total_charge_amount)}</span> in escrow
+        </>
+      ) : (
+        'Secured in escrow'
+      )}
+    </span>
+  )
+}
+
+export function isPaidChallenge(c: Pick<Challenge, 'funding_type' | 'entry_price'>) {
+  return c.funding_type === 'entry_funded' && c.entry_price != null
+}
+
+/** "Entry ₦X" for paid challenges, "Free entry" otherwise. */
+export function EntryBadge({ c, className }: { c: Pick<Challenge, 'funding_type' | 'entry_price'>; className?: string }) {
+  const paid = isPaidChallenge(c)
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs',
+        paid ? 'border-primary/30 bg-primary/10 text-primary' : 'text-muted-foreground',
+        className,
+      )}
+    >
+      {paid ? <Ticket className="size-3" /> : <Gift className="size-3" />}
+      {paid ? (
+        <>
+          Entry <span className="money">{formatNaira(c.entry_price!)}</span>
+        </>
+      ) : (
+        'Free entry'
+      )}
     </span>
   )
 }

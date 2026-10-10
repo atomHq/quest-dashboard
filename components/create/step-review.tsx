@@ -1,25 +1,19 @@
 'use client'
 
 import { useState } from 'react'
-import { ArrowLeft, CreditCard, Loader2, Lock, Pencil, Rocket, Wallet } from 'lucide-react'
+import { ArrowLeft, CreditCard, Loader2, Lock, Pencil, Rocket, Ticket, Wallet } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { computeFee, formatNaira, tierAmount } from '@/lib/money'
 import { formatDateTime } from '@/lib/time'
 import { SUBMISSION_TYPE_LABEL } from '@/lib/constants'
 import { errorMessage } from '@/lib/api/errors'
-import { draftPoolKobo, type CreateDraft, type Step } from '@/lib/create-draft'
-import { startDeposit } from '@/lib/deposit'
+import { draftEntryPriceKobo, draftPoolKobo, isPaidDraft, type CreateDraft, type Step } from '@/lib/create-draft'
+import { MIN_TOPUP_KOBO, startDeposit, topUpAmount } from '@/lib/deposit'
 import { useWallet } from '@/hooks/queries'
 import { FormError } from '@/components/common'
 import { RichText } from '@/components/common/rich-text'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-
-/** Paystack won't take tiny charges; round the shortfall up to whole naira with a ₦100 floor. */
-export const MIN_TOPUP_KOBO = 10_000
-export function topUpAmount(shortfallKobo: number) {
-  return Math.max(Math.ceil(shortfallKobo / 100) * 100, MIN_TOPUP_KOBO)
-}
 
 function Section({ title, step, onEdit, children }: { title: string; step: Step; onEdit: (s: Step) => void; children: React.ReactNode }) {
   return (
@@ -68,12 +62,17 @@ export function StepReview({
   const [redirecting, setRedirecting] = useState(false)
 
   const poolKobo = draftPoolKobo(draft)
-  const feeKobo = computeFee(poolKobo)
+  const feeKobo = poolKobo > 0 ? computeFee(poolKobo) : 0
   const totalKobo = poolKobo + feeKobo
   const available = wallet.data?.available ?? 0
   const shortfall = Math.max(0, totalKobo - available)
   const enough = wallet.data != null && shortfall === 0
   const tiers = [...(r.tiers ?? [])].sort((a, b) => Number(a.rank) - Number(b.rank))
+
+  const paid = isPaidDraft(draft)
+  const priceKobo = draftEntryPriceKobo(draft)
+  const feePerEntry = priceKobo > 0 ? computeFee(priceKobo) : 0
+  const poolPerEntry = Math.max(0, priceKobo - feePerEntry)
 
   async function topUp() {
     setTopUpError(null)
@@ -115,16 +114,48 @@ export function StepReview({
 
       <Section title="Rewards" step={3} onEdit={onEdit}>
         <div className="grid gap-1.5">
+          <Row label="Entry" value={paid ? `Paid · ${formatNaira(priceKobo)}` : 'Free to join'} />
           {tiers.map((t) => (
             <Row
               key={String(t.rank)}
               label={`Rank ${t.rank} · ${t.percentage}%`}
-              value={<span className="money text-primary">{formatNaira(tierAmount(poolKobo, Number(t.percentage)))}</span>}
+              value={
+                paid ? (
+                  <span className="text-muted-foreground">{t.percentage}% of the pool</span>
+                ) : (
+                  <span className="money text-primary">{formatNaira(tierAmount(poolKobo, Number(t.percentage)))}</span>
+                )
+              }
             />
           ))}
         </div>
       </Section>
 
+      {paid && (
+        <div className="overflow-hidden rounded-xl border border-primary/30 bg-gradient-to-b from-primary/[0.07] to-transparent">
+          <div className="grid gap-2 p-5">
+            <Row label="Entry price" value={<span className="money">{formatNaira(priceKobo)}</span>} />
+            <Row label="Platform fee per entry" value={<span className="money">{formatNaira(feePerEntry)}</span>} />
+            <Row
+              label="Added to the pool per entrant"
+              className="border-t pt-3 text-base font-medium"
+              value={<span className="money text-xl text-primary">{formatNaira(poolPerEntry)}</span>}
+            />
+            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Ticket className="size-3" /> You aren&apos;t charged. The pool starts at ₦0 and grows as people join; the challenge
+              goes live as soon as you publish.
+            </p>
+          </div>
+          <div className="border-t bg-card/60 p-5">
+            <Button className="h-11 w-full text-base" onClick={onCreate} disabled={creating}>
+              {creating ? <Loader2 className="animate-spin" /> : <Rocket />}
+              Publish challenge
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {!paid && (
       <div className="overflow-hidden rounded-xl border border-primary/30 bg-gradient-to-b from-primary/[0.07] to-transparent">
         <div className="grid gap-2 p-5">
           <Row label="Reward pool" value={<span className="money">{formatNaira(poolKobo)}</span>} />
@@ -183,6 +214,7 @@ export function StepReview({
           )}
         </div>
       </div>
+      )}
 
       <div className="flex justify-start border-t pt-5">
         <Button type="button" variant="ghost" onClick={onBack}>

@@ -26,7 +26,7 @@ export const EMPTY_DRAFT: CreateDraft = {
     max_participants: '',
     deadline: '',
   },
-  rewards: { pool_naira: '', tiers: [{ rank: 1, percentage: 100 }] },
+  rewards: { funding_type: 'creator_funded', pool_naira: '', entry_price_naira: '', tiers: [{ rank: 1, percentage: 100 }] },
 }
 
 export function loadDraft(): CreateDraft | null {
@@ -41,8 +41,20 @@ export function clearDraft() {
   removeKey(KEY)
 }
 
+export function isPaidDraft(d: Pick<CreateDraft, 'rewards'>) {
+  return d.rewards.funding_type === 'entry_funded'
+}
+
+/** The creator-funded pool; 0 for paid drafts, whose pool starts empty and grows with entries. */
 export function draftPoolKobo(d: Pick<CreateDraft, 'rewards'>) {
+  if (isPaidDraft(d)) return 0
   const n = parseNaira(d.rewards.pool_naira)
+  return Number.isFinite(n) && n > 0 ? nairaToKobo(n) : 0
+}
+
+export function draftEntryPriceKobo(d: Pick<CreateDraft, 'rewards'>) {
+  if (!isPaidDraft(d)) return 0
+  const n = parseNaira(d.rewards.entry_price_naira)
   return Number.isFinite(n) && n > 0 ? nairaToKobo(n) : 0
 }
 
@@ -64,6 +76,7 @@ export function toCreateInput(d: CreateDraft): CreateChallengeInput {
     submission_type: st.submission_type!,
     winner_selection: st.winner_selection!,
     reward_pool_amount: draftPoolKobo(d),
+    ...(isPaidDraft(d) ? { funding_type: 'entry_funded' as const, entry_price: draftEntryPriceKobo(d) } : { funding_type: 'creator_funded' as const }),
     max_participants: max === '' ? null : Number(max),
     deadline: new Date(st.deadline!).toISOString(),
     reward_tiers: (rw.tiers ?? []).map((t) => ({ rank: Number(t.rank), percentage: Number(t.percentage) })),

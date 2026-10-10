@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { CATEGORIES } from '@/lib/constants'
-import { parseNaira } from '@/lib/money'
+import { computeFee, nairaToKobo, parseNaira } from '@/lib/money'
 
 // ---------------------------------------------------------------------------
 // Auth
@@ -108,16 +108,40 @@ export const tierSchema = z.object({
   percentage: z.coerce.number<string | number>().int('Whole number').min(1, '1–100').max(100, '1–100'),
 })
 
+/** Optional naira text/number → number (NaN when blank); validated per funding type below. */
+const nairaAmount = z
+  .union([z.string(), z.number()])
+  .optional()
+  .transform((v) => parseNaira(v))
+
+export const MAX_ENTRY_PRICE_NAIRA = 10_000_000
+
 export const rewardsSchema = z
   .object({
-    pool_naira: z
-      .union([z.string(), z.number()])
-      .transform((v) => parseNaira(v))
-      .pipe(z.number({ message: 'Enter an amount' }).positive('Enter an amount greater than zero'))
-      .refine((n) => Math.round(n * 100) >= 100, 'Minimum pool is ₦1'),
+    funding_type: z.enum(['creator_funded', 'entry_funded']).default('creator_funded'),
+    pool_naira: nairaAmount,
+    entry_price_naira: nairaAmount,
     tiers: z.array(tierSchema).min(1, 'Add at least one reward tier'),
   })
   .superRefine((v, ctx) => {
+    if (v.funding_type === 'entry_funded') {
+      const n = v.entry_price_naira
+      const path = ['entry_price_naira']
+      if (!Number.isFinite(n)) ctx.addIssue({ code: 'custom', path, message: 'Enter an entry price' })
+      else if (n <= 0) ctx.addIssue({ code: 'custom', path, message: 'Enter a price greater than zero' })
+      else if (nairaToKobo(n) < 100) ctx.addIssue({ code: 'custom', path, message: 'Minimum entry price is ₦1' })
+      else if (n > MAX_ENTRY_PRICE_NAIRA) ctx.addIssue({ code: 'custom', path, message: 'Maximum entry price is ₦10,000,000' })
+      // Mirrors the backend's ENTRY_PRICE_TOO_LOW: some of every entry must reach the pool.
+      else if (nairaToKobo(n) <= computeFee(nairaToKobo(n)))
+        ctx.addIssue({ code: 'custom', path, message: 'Entry price must be higher than the platform fee' })
+    } else {
+      const n = v.pool_naira
+      const path = ['pool_naira']
+      if (!Number.isFinite(n)) ctx.addIssue({ code: 'custom', path, message: 'Enter an amount' })
+      else if (n <= 0) ctx.addIssue({ code: 'custom', path, message: 'Enter an amount greater than zero' })
+      else if (Math.round(n * 100) < 100) ctx.addIssue({ code: 'custom', path, message: 'Minimum pool is ₦1' })
+    }
+
     const sum = v.tiers.reduce((a, t) => a + (Number(t.percentage) || 0), 0)
     if (sum !== 100) ctx.addIssue({ code: 'custom', path: ['tiers'], message: `Percentages must add up to 100% (currently ${sum}%)` })
     const seen = new Set<number>()

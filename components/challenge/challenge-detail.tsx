@@ -17,7 +17,7 @@ import { buttonVariants } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Countdown, ParticipantsCount } from './challenge-card'
-import { EscrowBadge, RewardTiers } from './reward-tiers'
+import { EntryBadge, EscrowBadge, RewardTiers, isPaidChallenge } from './reward-tiers'
 import { JoinActions } from './join-actions'
 import { ParticipantsTab } from './participants'
 import { SubmissionsTab } from './submissions'
@@ -76,6 +76,7 @@ function DetailSkeleton() {
 
 export function ChallengeDetailView({ id }: { id: string }) {
   const { data, isPending, isError, error, refetch } = useChallenge(id)
+  const me = useSession((s) => s.user?.id)
 
   if (isPending) return <DetailSkeleton />
   if (isError)
@@ -94,7 +95,9 @@ export function ChallengeDetailView({ id }: { id: string }) {
       <ErrorState error={error} onRetry={() => refetch()} />
     )
 
-  const { challenge: c, reward_tiers, escrow_summary } = data
+  const { challenge: c, reward_tiers, escrow_summary, entry_summary } = data
+  const paid = isPaidChallenge(c)
+  const growing = c.status === 'active'
 
   return (
     <div>
@@ -142,8 +145,25 @@ export function ChallengeDetailView({ id }: { id: string }) {
             <div className="space-y-2">
               <p className="text-xs tracking-wide text-muted-foreground uppercase">Reward pool</p>
               <p className="money text-4xl font-semibold text-primary">{formatNaira(c.reward_pool_amount)}</p>
-              <EscrowBadge summary={escrow_summary} />
+              {paid && growing && <p className="text-xs text-muted-foreground">Grows with every entry until the deadline.</p>}
+              <div className="flex flex-wrap items-center gap-2">
+                {/* Paid pools are escrowed from entries; the creator-funding summary doesn't apply. */}
+                <EscrowBadge summary={me === c.creator_id && !paid ? escrow_summary : undefined} />
+                <EntryBadge c={c} />
+              </div>
             </div>
+            {paid && entry_summary && (
+              <div className="grid gap-1 rounded-lg border bg-background/50 p-3 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Entry price</span>
+                  <span className="money">{formatNaira(entry_summary.entry_price)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Added to the pool per entry</span>
+                  <span className="money">{formatNaira(entry_summary.pool_per_entry)}</span>
+                </div>
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-3 border-y py-4 text-sm">
               <div>
                 <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -166,6 +186,7 @@ export function ChallengeDetailView({ id }: { id: string }) {
 
           <div className="space-y-3 rounded-xl border bg-card p-5">
             <p className="text-sm font-medium">Reward breakdown</p>
+            {paid && growing && <p className="text-xs text-muted-foreground">Amounts so far — each tier grows as people join.</p>}
             <RewardTiers tiers={reward_tiers} />
           </div>
         </aside>

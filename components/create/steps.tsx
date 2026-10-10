@@ -3,10 +3,10 @@
 import { useEffect } from 'react'
 import { Controller, useFieldArray, useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { ArrowLeft, ArrowRight, Medal, Plus, Trash2 } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Gift, Medal, Plus, Ticket, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { CATEGORIES } from '@/lib/constants'
-import { formatNaira, nairaToKobo, parseNaira, tierAmount } from '@/lib/money'
+import { computeFee, formatNaira, nairaToKobo, parseNaira, tierAmount } from '@/lib/money'
 import {
   detailsSchema,
   rewardsSchema,
@@ -301,6 +301,10 @@ export function StepSettings({
 // Step 3 — Rewards
 // ---------------------------------------------------------------------------
 
+const REWARD_FIELDS = ['funding_type', 'pool_naira', 'entry_price_naira', 'tiers'] as const
+/** Paid pools start empty; tier previews use this many entrants as an example. */
+const EXAMPLE_ENTRANTS = 10
+
 export function StepRewards({
   defaults,
   error,
@@ -316,21 +320,35 @@ export function StepRewards({
 }) {
   const form = useForm<RewardsInput, unknown, RewardsValues>({
     resolver: zodResolver(rewardsSchema),
-    defaultValues: { pool_naira: '', tiers: [{ rank: 1, percentage: 100 }], ...defaults },
+    defaultValues: {
+      funding_type: 'creator_funded',
+      pool_naira: '',
+      entry_price_naira: '',
+      tiers: [{ rank: 1, percentage: 100 }],
+      ...defaults,
+    },
   })
   const { errors } = form.formState
   const tiers = useFieldArray({ control: form.control, name: 'tiers' })
+  const fundingType = useWatch({ control: form.control, name: 'funding_type' }) ?? 'creator_funded'
   const pool = useWatch({ control: form.control, name: 'pool_naira' })
+  const price = useWatch({ control: form.control, name: 'entry_price_naira' })
   const watched = useWatch({ control: form.control, name: 'tiers' })
-  useServerError(error, form.setError as never, ['pool_naira', 'tiers'])
+  useServerError(error, form.setError as never, REWARD_FIELDS)
 
   useEffect(() => {
     const sub = form.watch((v) => onChange(v as Partial<RewardsInput>))
     return () => sub.unsubscribe()
   }, [form, onChange])
 
+  const paid = fundingType === 'entry_funded'
+  const priceNaira = parseNaira(price)
+  const priceKobo = priceNaira > 0 ? nairaToKobo(priceNaira) : 0
+  const feePerEntry = priceKobo > 0 ? computeFee(priceKobo) : 0
+  const poolPerEntry = Math.max(0, priceKobo - feePerEntry)
   const poolNaira = parseNaira(pool)
-  const poolKobo = poolNaira > 0 ? nairaToKobo(poolNaira) : 0
+  // Paid pools grow with entries, so tier amounts are an example at EXAMPLE_ENTRANTS.
+  const poolKobo = paid ? poolPerEntry * EXAMPLE_ENTRANTS : poolNaira > 0 ? nairaToKobo(poolNaira) : 0
   const sum = (watched ?? []).reduce((a, t) => a + (Number(t?.percentage) || 0), 0)
   const tiersError = (errors.tiers as { message?: string; root?: { message?: string } } | undefined)
   const tiersMessage = tiersError?.root?.message ?? tiersError?.message
@@ -343,26 +361,79 @@ export function StepRewards({
   return (
     <form onSubmit={form.handleSubmit(onNext)} className="grid gap-6" noValidate>
       <FormError message={errors.root?.server?.message} />
-      <Field label="Reward pool" error={errors.pool_naira?.message} hint="The total prize money shared among winners.">
-        {(p) => (
-          <div className="relative sm:w-72">
-            <span className="money pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted-foreground">₦</span>
-            <Input
-              {...p}
-              inputMode="decimal"
-              placeholder="50,000"
-              className="money h-11 pl-7 text-lg"
-              {...form.register('pool_naira')}
-            />
-          </div>
+      <Field label="Entry" error={errors.funding_type?.message}>
+        {() => (
+          <Controller
+            control={form.control}
+            name="funding_type"
+            render={({ field }) => (
+              <Choice
+                value={field.value ?? 'creator_funded'}
+                onChange={(v) => {
+                  field.onChange(v)
+                  form.clearErrors(['pool_naira', 'entry_price_naira'])
+                }}
+                options={[
+                  { value: 'creator_funded', label: 'Free to join', description: 'You fund the prize pool up front.', icon: Gift },
+                  { value: 'entry_funded', label: 'Paid entry', description: 'Entrants pay to join; their entries fund the prize.', icon: Ticket },
+                ]}
+              />
+            )}
+          />
         )}
       </Field>
+
+      {paid ? (
+        <Field
+          label="Entry price"
+          error={errors.entry_price_naira?.message}
+          hint="Charged from each entrant's wallet when they join. Leaving early refunds the price minus the fee."
+        >
+          {(p) => (
+            <div className="grid gap-2">
+              <div className="relative sm:w-72">
+                <span className="money pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted-foreground">₦</span>
+                <Input
+                  {...p}
+                  inputMode="decimal"
+                  placeholder="1,000"
+                  className="money h-11 pl-7 text-lg"
+                  {...form.register('entry_price_naira')}
+                />
+              </div>
+              {priceKobo > 0 && (
+                <p className="money text-xs text-muted-foreground">
+                  {formatNaira(feePerEntry)} platform fee per entry · {formatNaira(poolPerEntry)} added to the pool per entrant
+                </p>
+              )}
+            </div>
+          )}
+        </Field>
+      ) : (
+        <Field label="Reward pool" error={errors.pool_naira?.message} hint="The total prize money shared among winners.">
+          {(p) => (
+            <div className="relative sm:w-72">
+              <span className="money pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted-foreground">₦</span>
+              <Input
+                {...p}
+                inputMode="decimal"
+                placeholder="50,000"
+                className="money h-11 pl-7 text-lg"
+                {...form.register('pool_naira')}
+              />
+            </div>
+          )}
+        </Field>
+      )}
 
       <div className="grid gap-3">
         <div className="flex items-end justify-between">
           <div>
             <p className="text-sm font-medium">Reward tiers</p>
-            <p className="text-xs text-muted-foreground">Split the pool between ranks. Must total 100%.</p>
+            <p className="text-xs text-muted-foreground">
+              Split the pool between ranks. Must total 100%.
+              {paid && ` Amounts shown assume ${EXAMPLE_ENTRANTS} entrants.`}
+            </p>
           </div>
           <span className={cn('money text-sm', sum === 100 ? 'text-success' : 'text-destructive')}>{sum}% / 100%</span>
         </div>

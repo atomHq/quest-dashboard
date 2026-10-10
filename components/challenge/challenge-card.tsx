@@ -10,6 +10,7 @@ import { SUBMISSION_TYPE_LABEL } from '@/lib/constants'
 import type { Challenge } from '@/lib/api/types'
 import { useNow } from '@/hooks/use-now'
 import { StatusBadge, SubmissionTypeIcon } from '@/components/common'
+import { EntryBadge, isPaidChallenge } from './reward-tiers'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 
@@ -56,9 +57,12 @@ export function ChallengeCard({ c, index = 0 }: { c: Challenge; index?: number }
         </div>
         <h3 className="line-clamp-2 leading-snug font-medium group-hover:text-primary">{c.title}</h3>
         <div className="mt-auto space-y-3">
-          <div>
-            <p className="text-xs text-muted-foreground">Reward pool</p>
-            <p className="money text-2xl font-semibold text-primary">{formatNaira(c.reward_pool_amount)}</p>
+          <div className="flex items-end justify-between gap-2">
+            <div>
+              <p className="text-xs text-muted-foreground">{isPaidChallenge(c) && c.status === 'active' ? 'Pool so far' : 'Reward pool'}</p>
+              <p className="money text-2xl font-semibold text-primary">{formatNaira(c.reward_pool_amount)}</p>
+            </div>
+            <EntryBadge c={c} />
           </div>
           <div className="flex items-center justify-between border-t pt-3 text-xs text-muted-foreground">
             <span className="flex items-center gap-1.5">

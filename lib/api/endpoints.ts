@@ -82,7 +82,7 @@ export const usersApi = {
     api.get<Profile>(`/users/${encodeURIComponent(username)}`, { auth: false }),
   joined: (p: PageParams = {}) => api.list<JoinedChallenge>('/users/me/challenges/joined', { query: { ...p } }),
   invites: (p: PageParams = {}) => api.list<Invite>('/users/me/invites', { query: { ...p } }),
-  /** BACKEND GAP: route not registered yet (ListByCreator exists in the service). */
+  /** Challenges the current user created, any status. */
   myChallenges: (p: PageParams = {}) => api.list<Challenge>('/users/me/challenges', { query: { ...p } }),
 }
 

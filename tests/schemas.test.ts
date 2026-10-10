@@ -28,6 +28,36 @@ describe('rewardsSchema', () => {
   it('rejects an empty pool', () => {
     expect(rewardsSchema.safeParse({ pool_naira: '', tiers: [{ rank: 1, percentage: 100 }] }).success).toBe(false)
   })
+
+  it('defaults to creator_funded for drafts saved before paid challenges', () => {
+    const r = rewardsSchema.safeParse({ pool_naira: 5000, tiers: [{ rank: 1, percentage: 100 }] })
+    expect(r.success).toBe(true)
+    if (r.success) expect(r.data.funding_type).toBe('creator_funded')
+  })
+
+  it('accepts a paid challenge with an entry price and no pool', () => {
+    const r = rewardsSchema.safeParse({
+      funding_type: 'entry_funded',
+      pool_naira: '',
+      entry_price_naira: '1,000',
+      tiers: [{ rank: 1, percentage: 100 }],
+    })
+    expect(r.success).toBe(true)
+    if (r.success) expect(r.data.entry_price_naira).toBe(1000)
+  })
+
+  it('requires an entry price for paid challenges', () => {
+    const r = rewardsSchema.safeParse({ funding_type: 'entry_funded', pool_naira: 5000, entry_price_naira: '', tiers: [{ rank: 1, percentage: 100 }] })
+    expect(r.success).toBe(false)
+    expect(r.error?.issues.some((i) => i.path.join('.') === 'entry_price_naira')).toBe(true)
+  })
+
+  it('rejects an entry price that does not exceed the fee', () => {
+    // ₦0.50 = 50 kobo, which is exactly the minimum per-entry fee.
+    const r = rewardsSchema.safeParse({ funding_type: 'entry_funded', entry_price_naira: '0.5', tiers: [{ rank: 1, percentage: 100 }] })
+    expect(r.success).toBe(false)
+    expect(r.error?.issues.some((i) => i.path.join('.') === 'entry_price_naira')).toBe(true)
+  })
 })
 
 describe('settingsSchema', () => {
