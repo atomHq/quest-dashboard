@@ -87,7 +87,6 @@ export interface ChallengeDetail {
 /** An item of GET /challenges/system. */
 export interface SystemChallengeItem {
   challenge: Challenge
-  reward_tiers: RewardTier[]
   entry_summary: EntrySummary | null
   media: ChallengeMedia[]
 }

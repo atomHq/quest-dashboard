@@ -120,9 +120,10 @@ export function useSearchChallenges(q: string) {
   })
 }
 
-/** Challenges run by the Quest team (placeholder data until the endpoint exists). */
+/** Challenges run by the Quest team (GET /challenges/system). */
 export function useSystemChallenges() {
-  return useQuery({ queryKey: qk.systemChallenges, queryFn: fetchSystemChallenges, staleTime: 5 * 60_000 })
+  // One retry at most: the section hides itself on error rather than spinning for minutes.
+  return useQuery({ queryKey: qk.systemChallenges, queryFn: fetchSystemChallenges, staleTime: 5 * 60_000, retry: 1 })
 }
 
 /** All challenges the current user has joined (walks every page; used for "already joined" checks). */
