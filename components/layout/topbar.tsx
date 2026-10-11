@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Bell, BellOff, LogOut, Menu, Plus, Settings, User, Wallet } from 'lucide-react'
+import { Bell, BellOff, LogOut, Menu, Plus, User, Wallet } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { formatNaira } from '@/lib/money'
@@ -20,7 +20,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
@@ -125,18 +124,14 @@ export function UserMenu() {
         <InitialsAvatar name={name} src={user.avatar_url} />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuLabel className="font-normal">
+        <div className="px-1.5 py-1">
           <p className="truncate text-sm font-medium text-foreground">{name}</p>
           <p className="truncate text-xs text-muted-foreground">@{user.username}</p>
-        </DropdownMenuLabel>
+        </div>
         <DropdownMenuSeparator />
         <DropdownMenuItem render={<Link href={`/u/${user.username}`} />}>
           <User /> Profile
         </DropdownMenuItem>
-        <DropdownMenuItem render={<Link href="/settings" />}>
-          <Settings /> Settings
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" onClick={logout}>
           <LogOut /> Log out
         </DropdownMenuItem>
