@@ -52,6 +52,9 @@ export function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
 }
 
 export function Sidebar() {
+  // Signed-out visitors (e.g. opening a challenge from the home page) get no app navigation.
+  const status = useSession((s) => s.status)
+  if (status === 'anon') return null
   return (
     <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col gap-6 border-r bg-sidebar px-3 py-5 lg:flex">
       <Logo className="px-3" />

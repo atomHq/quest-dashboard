@@ -150,10 +150,12 @@ export function Topbar() {
   const [navOpen, setNavOpen] = useState(false)
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b bg-background/80 px-4 backdrop-blur-md sm:px-6">
-      <Button variant="ghost" size="icon" className="lg:hidden" aria-label="Open menu" onClick={() => setNavOpen(true)}>
-        <Menu className="size-5" />
-      </Button>
-      <Logo className="lg:hidden" />
+      {status !== 'anon' && (
+        <Button variant="ghost" size="icon" className="lg:hidden" aria-label="Open menu" onClick={() => setNavOpen(true)}>
+          <Menu className="size-5" />
+        </Button>
+      )}
+      <Logo className={status === 'anon' ? undefined : 'lg:hidden'} />
       <Sheet open={navOpen} onOpenChange={setNavOpen}>
         <SheetContent side="left" className="w-72 gap-6 p-4">
           <SheetTitle className="sr-only">Navigation</SheetTitle>
