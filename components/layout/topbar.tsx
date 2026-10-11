@@ -26,7 +26,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { NavLinks } from './sidebar'
 
-function WalletPill() {
+export function WalletPill() {
   const { data, isLoading } = useWallet()
   const cached = useSession((s) => s.wallet)
   const balance = data ?? cached
@@ -57,7 +57,7 @@ function WalletPill() {
   )
 }
 
-function NotificationsDrawer() {
+export function NotificationsDrawer() {
   const [open, setOpen] = useState(false)
   const { data, unread } = useNotifications()
   return (
@@ -96,7 +96,7 @@ function NotificationsDrawer() {
   )
 }
 
-function UserMenu() {
+export function UserMenu() {
   const user = useSession((s) => s.user)
   const token = useSession((s) => s.accessToken)
   const router = useRouter()

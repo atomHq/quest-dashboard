@@ -4,31 +4,12 @@ import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { Flame, Loader2, Sparkles, Trophy } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { CATEGORIES } from '@/lib/constants'
 import { useChallengesFeed, useTrending } from '@/hooks/queries'
 import { EmptyState, ErrorState, PageHeader } from '@/components/common'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { ChallengeCard, ChallengeCardSkeleton, ChallengeGrid } from './challenge-card'
 
 type Sort = 'newest' | 'trending'
-
-function Pill({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      className={cn(
-        'h-8 shrink-0 rounded-full border px-3 text-sm transition-colors',
-        active
-          ? 'border-primary bg-primary text-primary-foreground'
-          : 'bg-card text-muted-foreground hover:border-foreground/30 hover:text-foreground',
-      )}
-    >
-      {children}
-    </button>
-  )
-}
 
 function Segmented<T extends string>({
   value,
@@ -84,8 +65,8 @@ export function ChallengeFeed() {
   return (
     <div>
       <PageHeader
-        title="Challenges"
-        description="Compete for cash. Every reward pool is held in escrow."
+        title={category ? `${category} challenges` : 'Community challenges'}
+        description="Created by the community. Every reward pool is held in escrow."
         actions={
           <Segmented<Sort>
             value={sort}
@@ -99,7 +80,7 @@ export function ChallengeFeed() {
       />
 
       {sort === 'newest' && (
-        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="mb-6">
           <Segmented<'active' | 'all'>
             value={statusAll ? 'all' : 'active'}
             onChange={(v) => setParam('status', v === 'all' ? 'all' : null)}
@@ -108,16 +89,6 @@ export function ChallengeFeed() {
               { value: 'all', label: 'All' },
             ]}
           />
-          <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0 sm:pb-0 [&::-webkit-scrollbar]:hidden">
-            <Pill active={!category} onClick={() => setParam('category', null)}>
-              All categories
-            </Pill>
-            {CATEGORIES.map((c) => (
-              <Pill key={c} active={category === c} onClick={() => setParam('category', category === c ? null : c)}>
-                {c}
-              </Pill>
-            ))}
-          </div>
         </div>
       )}
 

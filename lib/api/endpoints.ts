@@ -98,6 +98,8 @@ export interface ChallengeFilters extends PageParams {
 export const challengesApi = {
   list: (f: ChallengeFilters = {}) => api.list<Challenge>('/challenges', { query: { ...f }, auth: false }),
   trending: (p: PageParams = {}) => api.get<Challenge[]>('/challenges/trending', { query: { ...p }, auth: false }),
+  search: (q: string, p: PageParams = {}) =>
+    api.get<Challenge[]>('/challenges/search', { query: { q, ...p }, auth: false }),
   get: (id: string) => api.get<ChallengeDetail>(`/challenges/${id}`, { auth: false }),
   create: (body: CreateChallengeInput) => api.post<ChallengeDetail>('/challenges', body),
   update: (id: string, body: UpdateChallengeInput) =>

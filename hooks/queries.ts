@@ -12,6 +12,7 @@ import {
   type TransactionFilters,
 } from '@/lib/api/endpoints'
 import type { Challenge, ChallengeDetail, ChallengeStatus } from '@/lib/api/types'
+import { fetchSystemChallenges } from '@/lib/system-challenges'
 import { DEFAULT_PER_PAGE } from '@/lib/constants'
 import { useSession } from '@/stores/session'
 
@@ -30,6 +31,8 @@ export const qk = {
   profile: (username: string) => ['profile', username] as const,
   myChallenges: ['my-challenges'] as const,
   invites: ['invites'] as const,
+  search: (q: string) => ['challenges', 'search', q] as const,
+  systemChallenges: ['system-challenges'] as const,
 }
 
 function useAuthed() {
@@ -103,6 +106,23 @@ export function useChallenge(id: string, opts: { pollWhile?: (d: ChallengeDetail
     queryFn: () => challengesApi.get(id),
     refetchInterval: (q) => (pollWhile && q.state.data && pollWhile(q.state.data) ? intervalMs : false),
   })
+}
+
+/** Title/description search for the header; pass the debounced term. Needs at least 2 characters. */
+export function useSearchChallenges(q: string) {
+  const term = q.trim()
+  return useQuery({
+    queryKey: qk.search(term),
+    queryFn: () => challengesApi.search(term, { per_page: 6 }),
+    enabled: term.length >= 2,
+    staleTime: 60_000,
+    placeholderData: (prev) => prev,
+  })
+}
+
+/** Challenges run by the Quest team (placeholder data until the endpoint exists). */
+export function useSystemChallenges() {
+  return useQuery({ queryKey: qk.systemChallenges, queryFn: fetchSystemChallenges, staleTime: 5 * 60_000 })
 }
 
 /** All challenges the current user has joined (walks every page; used for "already joined" checks). */
