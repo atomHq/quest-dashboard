@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, ChevronDown, Clock, FileQuestion, ScrollText, Users } from 'lucide-react'
+import { ArrowLeft, BadgeCheck, ChevronDown, Clock, FileQuestion, ScrollText, Users } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatNaira } from '@/lib/money'
 import { formatDateTime } from '@/lib/time'
@@ -19,6 +19,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Countdown, ParticipantsCount } from './challenge-card'
 import { EntryBadge, EscrowBadge, RewardTiers, isPaidChallenge } from './reward-tiers'
 import { JoinActions } from './join-actions'
+import { MediaGallery } from './media-gallery'
 import { ParticipantsTab } from './participants'
 import { SubmissionsTab } from './submissions'
 
@@ -95,7 +96,7 @@ export function ChallengeDetailView({ id }: { id: string }) {
       <ErrorState error={error} onRetry={() => refetch()} />
     )
 
-  const { challenge: c, reward_tiers, escrow_summary, entry_summary } = data
+  const { challenge: c, reward_tiers, escrow_summary, entry_summary, media = [] } = data
   const paid = isPaidChallenge(c)
   const growing = c.status === 'active'
 
@@ -110,6 +111,11 @@ export function ChallengeDetailView({ id }: { id: string }) {
           <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-2">
               <StatusBadge status={c.status} />
+              {c.is_system && (
+                <Badge className="gap-1 border-primary/30 bg-primary/10 text-primary">
+                  <BadgeCheck className="size-3" /> Quest Original
+                </Badge>
+              )}
               <Badge variant="outline">{c.category}</Badge>
               <Badge variant="outline" className="gap-1">
                 <SubmissionTypeIcon type={c.submission_type} className="size-3" />
@@ -118,9 +124,16 @@ export function ChallengeDetailView({ id }: { id: string }) {
               {c.challenge_type === 'direct' && <Badge variant="outline">Invite only</Badge>}
             </div>
             <h1 className="text-3xl font-semibold tracking-tight text-balance">{c.title}</h1>
-            <CreatorChip creatorId={c.creator_id} />
+            {c.is_system ? (
+              <span className="inline-flex items-center gap-2 text-sm text-muted-foreground">
+                <BadgeCheck className="size-4 text-primary" /> Run by the Quest team
+              </span>
+            ) : (
+              <CreatorChip creatorId={c.creator_id} />
+            )}
           </div>
 
+          <MediaGallery media={media} title={c.title} />
           <RichText value={c.description} />
           {c.rules && <Rules rules={c.rules} />}
 

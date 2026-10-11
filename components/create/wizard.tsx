@@ -20,6 +20,7 @@ import { Button, buttonVariants } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { StepDetails, StepRewards, StepSettings, type StepError } from './steps'
 import { StepReview } from './step-review'
+import { MediaManager } from '@/components/challenge/media-manager'
 
 const STEPS: { n: Step; label: string }[] = [
   { n: 1, label: 'Details' },
@@ -123,6 +124,9 @@ function Success({ detail }: { detail: ChallengeDetail }) {
           escrow for “{c.title}”.
         </p>
       )}
+      <div className="w-full rounded-xl border bg-card p-4 text-left">
+        <MediaManager challengeId={c.id} title={c.title} />
+      </div>
       <div className="flex gap-2">
         <Link href={`/dashboard/challenges/${c.id}`} className={buttonVariants()}>
           Manage challenge

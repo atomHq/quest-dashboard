@@ -3,9 +3,10 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ArrowRight, BadgeCheck, ChevronLeft, ChevronRight, Clock, Gift, Play, Ticket, Users } from 'lucide-react'
+import { ArrowRight, BadgeCheck, ChevronLeft, ChevronRight, Clock, Gift, Music, Play, Ticket, Users } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatNaira } from '@/lib/money'
+import { SUBMISSION_TYPE_LABEL } from '@/lib/constants'
 import type { SystemChallenge } from '@/lib/system-challenges'
 import { useSystemChallenges } from '@/hooks/queries'
 import { SubmissionTypeIcon } from '@/components/common'
@@ -17,6 +18,13 @@ import { Countdown, ParticipantsCount } from '@/components/challenge/challenge-c
 const AUTO_ADVANCE_MS = 7_000
 
 function Media({ m, title }: { m: SystemChallenge['media']; title: string }) {
+  if (m.type === 'audio')
+    return (
+      <div className="flex size-full flex-col items-center justify-center gap-4 bg-gradient-to-br from-primary/25 via-primary/5 to-background p-6">
+        <Music className="size-10 text-primary" />
+        {m.url && <audio src={m.url} controls className="w-full max-w-sm" aria-label={title} />}
+      </div>
+    )
   if (m.type === 'video' && m.url)
     return (
       <video
@@ -34,7 +42,7 @@ function Media({ m, title }: { m: SystemChallenge['media']; title: string }) {
   return (
     <div className="relative size-full">
       {src ? (
-        // eslint-disable-next-line @next/next/no-img-element -- media will come from the API's CDN
+        // eslint-disable-next-line @next/next/no-img-element -- media is served from the storage CDN
         <img src={src} alt={title} className="size-full object-cover" />
       ) : (
         <div className="size-full bg-gradient-to-br from-primary/20 to-background" />
@@ -68,7 +76,7 @@ function Slide({ c }: { c: SystemChallenge }) {
         <Media m={c.media} title={c.title} />
         <Badge className="absolute top-3 left-3 gap-1 bg-background/80 text-foreground backdrop-blur">
           <SubmissionTypeIcon type={c.submission_type} className="size-3" />
-          {c.media.type === 'video' ? 'Video' : 'Photo'} challenge
+          {SUBMISSION_TYPE_LABEL[c.submission_type]} entries
         </Badge>
       </div>
 
@@ -80,7 +88,7 @@ function Slide({ c }: { c: SystemChallenge }) {
         </div>
 
         <div>
-          <p className="text-xs text-muted-foreground">Reward pool</p>
+          <p className="text-xs text-muted-foreground">{c.entry_price ? 'Pool so far' : 'Reward pool'}</p>
           <p className="money text-3xl font-semibold text-primary">{formatNaira(c.reward_pool_amount)}</p>
         </div>
 
@@ -97,15 +105,9 @@ function Slide({ c }: { c: SystemChallenge }) {
         </div>
 
         <div className="mt-auto">
-          {c.challenge_id ? (
-            <Link href={`/challenges/${c.challenge_id}`} className={buttonVariants({ className: 'h-10 w-full sm:w-auto' })}>
-              View challenge <ArrowRight />
-            </Link>
-          ) : (
-            <Button className="h-10 w-full sm:w-auto" disabled>
-              Opens soon
-            </Button>
-          )}
+          <Link href={`/challenges/${c.challenge_id}`} className={buttonVariants({ className: 'h-10 w-full sm:w-auto' })}>
+            {c.entry_price ? `Join for ${formatNaira(c.entry_price)}` : 'View challenge'} <ArrowRight />
+          </Link>
         </div>
       </div>
     </div>

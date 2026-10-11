@@ -37,6 +37,7 @@ import { Field } from '@/components/common/field'
 import { RichTextEditor } from '@/components/common/rich-text-editor'
 import { Countdown, ParticipantsCount } from '@/components/challenge/challenge-card'
 import { EntryBadge, EscrowBadge, RewardTiers, isPaidChallenge } from '@/components/challenge/reward-tiers'
+import { MediaManager } from '@/components/challenge/media-manager'
 import { SubmissionCard, SubmissionGridSkeleton, SubmissionModal } from '@/components/challenge/submissions'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -683,6 +684,11 @@ export function ManageChallengeView({ id }: { id: string }) {
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <div className="min-w-0 space-y-6">
           {c.status === 'draft' && <EditDraftForm c={c} />}
+          {(c.status === 'draft' || c.status === 'active') && (
+            <div className="rounded-xl border bg-card p-5">
+              <MediaManager challengeId={c.id} title={c.title} />
+            </div>
+          )}
           {c.status === 'active' && c.challenge_type === 'direct' && <InviteForm c={c} />}
           {c.status === 'active' && <CloseChallenge c={c} />}
           {c.status === 'closed' && <WinnerPicker c={c} tiers={reward_tiers} />}

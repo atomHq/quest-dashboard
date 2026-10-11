@@ -3,6 +3,7 @@ import { ApiError, toApiError } from './errors'
 import type {
   Challenge,
   ChallengeDetail,
+  ChallengeMedia,
   ChallengeStatus,
   ClientSession,
   CreateChallengeInput,
@@ -17,6 +18,7 @@ import type {
   Submission,
   SubmissionMedia,
   SubmissionWithMedia,
+  SystemChallengeItem,
   UpdateChallengeInput,
   UploadUrl,
   WalletAccount,
@@ -98,6 +100,13 @@ export interface ChallengeFilters extends PageParams {
 export const challengesApi = {
   list: (f: ChallengeFilters = {}) => api.list<Challenge>('/challenges', { query: { ...f }, auth: false }),
   trending: (p: PageParams = {}) => api.get<Challenge[]>('/challenges/trending', { query: { ...p }, auth: false }),
+  /** Quest Originals (system challenges), newest first. */
+  system: (f: { status?: ChallengeStatus; category?: string; per_page?: number } = {}) =>
+    api.get<SystemChallengeItem[]>('/challenges/system', { query: { ...f }, auth: false }),
+  mediaUploadUrl: (id: string, contentType: string) =>
+    api.post<UploadUrl>(`/challenges/${id}/media/upload-url`, { content_type: contentType }),
+  confirmMedia: (id: string, key: string) => api.post<ChallengeMedia>(`/challenges/${id}/media/confirm`, { key }),
+  deleteMedia: (id: string, mediaId: string) => api.delete<void>(`/challenges/${id}/media/${mediaId}`),
   search: (q: string, p: PageParams = {}) =>
     api.get<Challenge[]>('/challenges/search', { query: { q, ...p }, auth: false }),
   get: (id: string) => api.get<ChallengeDetail>(`/challenges/${id}`, { auth: false }),

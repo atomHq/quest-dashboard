@@ -60,7 +60,10 @@ export function ChallengeFeed() {
   const newest = useChallengesFeed({ status: statusAll ? undefined : 'active', category })
   const trending = useTrending(sort === 'trending')
   const q = sort === 'trending' ? trending : newest
-  const items = sort === 'trending' ? (trending.data?.pages.flat() ?? []) : (newest.data?.pages.flatMap((p) => p.data) ?? [])
+  // Quest Originals have their own section on the home page.
+  const items = (
+    sort === 'trending' ? (trending.data?.pages.flat() ?? []) : (newest.data?.pages.flatMap((p) => p.data) ?? [])
+  ).filter((c) => !c.is_system)
 
   return (
     <div>

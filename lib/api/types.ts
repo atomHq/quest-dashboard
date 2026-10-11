@@ -34,6 +34,19 @@ export interface Challenge {
   entry_price: number | null
   /** Platform fee kept from each entry; 0 for creator_funded. */
   entry_platform_fee: number
+  /** Run by the Quest team ("Quest Originals"); only admins create these. */
+  is_system: boolean
+}
+
+export type MediaType = 'image' | 'video' | 'audio'
+
+/** One of up to three images, videos or audio clips illustrating a challenge. */
+export interface ChallengeMedia {
+  id: string
+  media_type: MediaType
+  content_type: string
+  url: string
+  position: number
 }
 
 export interface RewardTier {
@@ -68,6 +81,15 @@ export interface ChallengeDetail {
   escrow_summary: EscrowSummary
   /** Set for entry_funded challenges. */
   entry_summary?: EntrySummary | null
+  media?: ChallengeMedia[]
+}
+
+/** An item of GET /challenges/system. */
+export interface SystemChallengeItem {
+  challenge: Challenge
+  reward_tiers: RewardTier[]
+  entry_summary: EntrySummary | null
+  media: ChallengeMedia[]
 }
 
 export interface Profile {
