@@ -4,14 +4,16 @@ import { useEffect } from 'react'
 import { keepPreviousData, useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import { isApiError } from '@/lib/api/errors'
 import {
+  adminApi,
   challengesApi,
+  matchesApi,
   submissionsApi,
   usersApi,
   walletApi,
   type ChallengeFilters,
   type TransactionFilters,
 } from '@/lib/api/endpoints'
-import type { Challenge, ChallengeDetail, ChallengeStatus } from '@/lib/api/types'
+import type { Challenge, ChallengeDetail, ChallengeStatus, HeadToHeadState, MatchView } from '@/lib/api/types'
 import { fetchSystemChallenges } from '@/lib/system-challenges'
 import { DEFAULT_PER_PAGE } from '@/lib/constants'
 import { useSession } from '@/stores/session'
@@ -33,6 +35,9 @@ export const qk = {
   invites: ['invites'] as const,
   search: (q: string) => ['challenges', 'search', q] as const,
   systemChallenges: ['system-challenges'] as const,
+  match: (id: string) => ['match', id] as const,
+  matches: ['matches'] as const,
+  disputes: ['disputes'] as const,
 }
 
 function useAuthed() {
@@ -259,4 +264,37 @@ export interface AppNotification {
 /** BACKEND GAP: no notifications API yet. */
 export function useNotifications(): { data: AppNotification[]; unread: number; isLoading: boolean } {
   return { data: [], unread: 0, isLoading: false }
+}
+
+/** A head-to-head match. Polls while the payout runs, so the page flips to "paid" on its own. */
+export function useMatch(id: string) {
+  return useQuery({
+    queryKey: qk.match(id),
+    queryFn: () => matchesApi.get(id),
+    enabled: useAuthed(),
+    retry: (n, err) => !isApiError(err, 'NOT_FOUND') && n < 2,
+    refetchInterval: (q) => (q.state.data && isSettling(q.state.data) ? 3_000 : false),
+  })
+}
+
+function isSettling(m: MatchView) {
+  return m.head_to_head.state === 'settling'
+}
+
+/** Matches the current user plays in (first 100, newest first), optionally by state. */
+export function useMyMatches(state?: HeadToHeadState[]) {
+  return useQuery({
+    queryKey: [...qk.matches, state ?? 'all'],
+    enabled: useAuthed(),
+    queryFn: async () => (await matchesApi.mine({ per_page: 100, state })).data,
+  })
+}
+
+/** Admin: disputed matches, oldest first. */
+export function useDisputes(enabled = true) {
+  return useQuery({
+    queryKey: qk.disputes,
+    enabled: useAuthed() && enabled,
+    queryFn: async () => (await adminApi.disputes({ per_page: 100 })).data,
+  })
 }

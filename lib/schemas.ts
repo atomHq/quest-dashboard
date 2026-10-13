@@ -169,3 +169,71 @@ export const depositSchema = z.object({
     .pipe(z.number({ message: 'Enter an amount' }).min(100, 'Minimum top-up is ₦100')
     .max(10_000_000, 'Maximum top-up is ₦10,000,000')),
 })
+
+// ---------------------------------------------------------------------------
+// Head-to-head matches
+// ---------------------------------------------------------------------------
+
+export const BEST_OF_OPTIONS = ['1', '3', '5', '7'] as const
+
+export const matchSchema = z
+  .object({
+    /** A username, with or without the leading @. */
+    opponent: z
+      .string()
+      .trim()
+      .regex(/^@?[a-zA-Z0-9_]{3,50}$/, "Enter your opponent's username"),
+    title: z.string().trim().min(1, 'Name the game, e.g. FIFA 26').max(200, 'Title is too long'),
+    rules: z.string().trim().max(2000, 'Rules are too long'),
+    /** '' = single game / untracked score. */
+    best_of: z.enum(['', ...BEST_OF_OPTIONS]),
+    stake_naira: nairaAmount,
+    deadline,
+  })
+  .superRefine((v, ctx) => {
+    const n = v.stake_naira
+    const path = ['stake_naira']
+    if (!Number.isFinite(n)) ctx.addIssue({ code: 'custom', path, message: 'Enter a stake' })
+    else if (n <= 0) ctx.addIssue({ code: 'custom', path, message: 'Enter a stake greater than zero' })
+    else if (nairaToKobo(n) < 100) ctx.addIssue({ code: 'custom', path, message: 'Minimum stake is ₦1' })
+    else if (n > MAX_ENTRY_PRICE_NAIRA) ctx.addIssue({ code: 'custom', path, message: 'Maximum stake is ₦10,000,000' })
+    // Mirrors the backend's STAKE_TOO_LOW: some of each stake must reach the winner.
+    else if (nairaToKobo(n) <= computeFee(nairaToKobo(n)))
+      ctx.addIssue({ code: 'custom', path, message: 'Stake must be higher than the platform fee' })
+  })
+export type MatchInput = z.input<typeof matchSchema>
+export type MatchValues = z.output<typeof matchSchema>
+
+/** Optional whole-number score; '' when not given. */
+const scoreField = z
+  .string()
+  .trim()
+  .refine((v) => v === '' || (/^\d+$/.test(v) && Number(v) <= 99), 'Enter a whole number')
+
+/**
+ * A player's result report. Scores are optional but come as a pair, put the winner ahead and — when the series
+ * length is known — give the winner exactly the clinching number of games (3 in a best of 5). Mirrors the backend.
+ */
+export function reportSchema(bestOf: number | null) {
+  return z
+    .object({
+      winner: z.enum(['creator', 'opponent'], { message: 'Pick who won' }),
+      creator_score: scoreField,
+      opponent_score: scoreField,
+    })
+    .superRefine((v, ctx) => {
+      const cs = v.creator_score
+      const os = v.opponent_score
+      if (cs === '' && os === '') return
+      if (cs === '' || os === '') {
+        ctx.addIssue({ code: 'custom', path: [cs === '' ? 'creator_score' : 'opponent_score'], message: 'Enter both scores, or neither' })
+        return
+      }
+      const [winner, loser] = v.winner === 'creator' ? [Number(cs), Number(os)] : [Number(os), Number(cs)]
+      const winnerField = v.winner === 'creator' ? 'creator_score' : 'opponent_score'
+      if (winner <= loser) ctx.addIssue({ code: 'custom', path: [winnerField], message: 'The winner needs the higher score' })
+      else if (bestOf != null && winner !== (bestOf + 1) / 2)
+        ctx.addIssue({ code: 'custom', path: [winnerField], message: `In a best of ${bestOf} the winner takes ${(bestOf + 1) / 2} games` })
+    })
+}
+export type ReportValues = z.infer<ReturnType<typeof reportSchema>>

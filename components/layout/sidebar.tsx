@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Compass, Settings, User, Wallet, Plus } from 'lucide-react'
+import { LayoutDashboard, Compass, Gavel, Settings, Swords, User, Wallet, Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Logo } from '@/components/common'
 import { buttonVariants } from '@/components/ui/button'
@@ -10,9 +10,11 @@ import { useSession } from '@/stores/session'
 
 export function useNavItems() {
   const username = useSession((s) => s.user?.username)
+  const isAdmin = useSession((s) => s.user?.role === 'admin')
   return [
     { href: '/', label: 'Feed', icon: Compass, match: (p: string) => p === '/' || p.startsWith('/challenges') },
     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, match: (p: string) => p.startsWith('/dashboard') },
+    { href: '/matches', label: 'Matches', icon: Swords, match: (p: string) => p.startsWith('/matches') },
     { href: '/wallet', label: 'Wallet', icon: Wallet, match: (p: string) => p.startsWith('/wallet') },
     {
       href: username ? `/u/${username}` : '/login',
@@ -21,6 +23,9 @@ export function useNavItems() {
       match: (p: string) => !!username && p === `/u/${username}`,
     },
     { href: '/settings', label: 'Settings', icon: Settings, match: (p: string) => p.startsWith('/settings') },
+    ...(isAdmin
+      ? [{ href: '/admin/disputes', label: 'Disputes', icon: Gavel, match: (p: string) => p.startsWith('/admin') }]
+      : []),
   ]
 }
 

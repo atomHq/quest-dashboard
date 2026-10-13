@@ -9,6 +9,7 @@ import type { ChallengeStatus, JoinedChallenge } from '@/lib/api/types'
 import { EmptyState, ErrorState, PageHeader, StatusBadge } from '@/components/common'
 import { Countdown, ParticipantsCount } from '@/components/challenge/challenge-card'
 import { StatCard } from '@/components/wallet/wallet-view'
+import { DashboardMatches } from '@/components/match/match-list'
 import { buttonVariants } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -30,7 +31,10 @@ const IN_PROGRESS: ChallengeStatus[] = ['active', 'closed', 'judging']
 function Participating() {
   const router = useRouter()
   const joined = useJoined()
-  const items = (joined.data ?? []).filter((c) => IN_PROGRESS.includes(c.status) && c.participant_status !== 'withdrawn')
+  // Matches have their own section.
+  const items = (joined.data ?? []).filter(
+    (c) => c.challenge_type !== 'head_to_head' && IN_PROGRESS.includes(c.status) && c.participant_status !== 'withdrawn',
+  )
 
   return (
     <div className="rounded-xl border bg-card">
@@ -96,7 +100,8 @@ export function DashboardView() {
   const router = useRouter()
   const wallet = useWallet()
   const mine = useMyChallenges()
-  const items = mine.data?.items ?? []
+  // Matches the user created show in the Matches section, not here.
+  const items = (mine.data?.items ?? []).filter((c) => c.challenge_type !== 'head_to_head')
   const supported = mine.data?.supported ?? false
   const active = items.filter((c) => c.status === 'active').length
   const completed = items.filter((c) => c.status === 'completed').length
@@ -133,6 +138,8 @@ export function DashboardView() {
           <Dash />
         </StatCard>
       </div>
+
+      <DashboardMatches />
 
       <div className="rounded-xl border bg-card">
         <div className="border-b p-4">

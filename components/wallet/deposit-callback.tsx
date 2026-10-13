@@ -62,6 +62,8 @@ export function DepositCallback() {
         toast.success('Wallet funded — you can create your challenge now.')
       } else if (ctx?.pending?.purpose === 'join') {
         toast.success('Wallet funded — confirm to join the challenge.')
+      } else if (ctx?.pending?.purpose === 'match') {
+        toast.success('Wallet funded — you can stake on your match now.')
       }
       if (returnTo) setTimeout(() => router.replace(returnTo), 1200)
     }

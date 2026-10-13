@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Clock, Compass, Pencil, Trophy, UserPlus, UserX } from 'lucide-react'
+import { Clock, Compass, Pencil, Swords, Trophy, UserPlus, UserX } from 'lucide-react'
 import { formatNaira } from '@/lib/money'
 import { formatDate } from '@/lib/time'
 import { isApiError } from '@/lib/api/errors'
@@ -29,7 +29,9 @@ function JoinedTab() {
       </ChallengeGrid>
     )
   if (q.isError) return <ErrorState error={q.error} onRetry={() => q.refetch()} />
-  if (q.data.length === 0)
+  // Matches are private and live under /matches.
+  const items = q.data.filter((c) => c.challenge_type !== 'head_to_head')
+  if (items.length === 0)
     return (
       <EmptyState
         icon={Compass}
@@ -44,7 +46,7 @@ function JoinedTab() {
     )
   return (
     <ChallengeGrid>
-      {q.data.map((c, i) => (
+      {items.map((c, i) => (
         <ChallengeCard key={c.id} c={c} index={i} />
       ))}
     </ChallengeGrid>
@@ -111,14 +113,19 @@ export function ProfileView({ username }: { username: string }) {
               <Pencil /> Edit profile
             </Link>
           ) : (
-            <Tooltip>
-              <TooltipTrigger render={<span tabIndex={0} className="w-fit" />}>
-                <Button disabled className="pointer-events-none">
-                  <UserPlus /> Follow
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Following is coming soon</TooltipContent>
-            </Tooltip>
+            <div className="flex flex-wrap gap-2">
+              <Link href={`/matches/new?opponent=${encodeURIComponent(p.username)}`} className={buttonVariants()}>
+                <Swords /> Challenge to a match
+              </Link>
+              <Tooltip>
+                <TooltipTrigger render={<span tabIndex={0} className="w-fit" />}>
+                  <Button variant="outline" disabled className="pointer-events-none">
+                    <UserPlus /> Follow
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Following is coming soon</TooltipContent>
+              </Tooltip>
+            </div>
           )}
         </div>
         {p.bio && <p className="px-5 pb-5 text-sm whitespace-pre-line text-muted-foreground">{p.bio}</p>}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { computeFee, computeTotalCharge, formatNaira, nairaToKobo, parseNaira, tierAmount } from '@/lib/money'
+import { computeFee, computeTotalCharge, formatNaira, matchWinnerTakes, nairaToKobo, parseNaira, tierAmount } from '@/lib/money'
 
 describe('money', () => {
   it('formats kobo as whole naira', () => {
@@ -31,5 +31,14 @@ describe('money', () => {
   it('floors tier amounts', () => {
     expect(tierAmount(500_000, 60)).toBe(300_000)
     expect(tierAmount(1_001, 33)).toBe(330)
+  })
+})
+
+describe('matchWinnerTakes', () => {
+  it('pays both stakes minus the fee on each, like the backend stake_summary', () => {
+    // ₦5,000 each: ₦250 fee per stake → ₦9,500.
+    expect(matchWinnerTakes(500_000)).toBe(950_000)
+    // Minimum fee: a ₦5 stake loses 50 kobo each.
+    expect(matchWinnerTakes(500)).toBe(900)
   })
 })

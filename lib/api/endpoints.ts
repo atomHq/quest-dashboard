@@ -11,6 +11,13 @@ import type {
   EarningsSummary,
   Invite,
   JoinedChallenge,
+  MatchEvidence,
+  MatchListItem,
+  MatchView,
+  CreateMatchInput,
+  HeadToHeadOutcome,
+  HeadToHeadState,
+  ReportMatchInput,
   PageParams,
   Participant,
   Profile,
@@ -167,4 +174,32 @@ export const walletApi = {
       { amount: amountKobo, currency: 'NGN' },
       { local: true, headers: { 'Idempotency-Key': idempotencyKey } },
     ),
+}
+
+// ---------------------------------------------------------------------------
+// Head-to-head matches (players only; admins resolve disputes)
+// ---------------------------------------------------------------------------
+
+export const matchesApi = {
+  create: (body: CreateMatchInput, idempotencyKey: string) =>
+    api.post<MatchView>('/head-to-heads', body, { headers: { 'Idempotency-Key': idempotencyKey } }),
+  get: (id: string) => api.get<MatchView>(`/head-to-heads/${id}`),
+  accept: (id: string) => api.post<MatchView>(`/head-to-heads/${id}/accept`),
+  decline: (id: string) => api.post<MatchView>(`/head-to-heads/${id}/decline`),
+  cancel: (id: string) => api.post<MatchView>(`/head-to-heads/${id}/cancel`),
+  report: (id: string, body: ReportMatchInput) => api.post<MatchView>(`/head-to-heads/${id}/report`, body),
+  evidenceUploadUrl: (id: string, content_type: string) =>
+    api.post<UploadUrl>(`/head-to-heads/${id}/evidence/upload-url`, { content_type }),
+  confirmEvidence: (id: string, key: string) => api.post<MatchEvidence>(`/head-to-heads/${id}/evidence/confirm`, { key }),
+  /** Matches the current user plays in, newest first. */
+  mine: (f: PageParams & { state?: HeadToHeadState[] } = {}) =>
+    api.list<MatchListItem>('/users/me/head-to-heads', {
+      query: { page: f.page, per_page: f.per_page, state: f.state?.length ? f.state.join(',') : undefined },
+    }),
+}
+
+export const adminApi = {
+  disputes: (p: PageParams = {}) => api.list<MatchListItem>('/admin/head-to-heads/disputes', { query: { ...p } }),
+  resolve: (id: string, outcome: HeadToHeadOutcome, note?: string) =>
+    api.post<MatchView>(`/admin/head-to-heads/${id}/resolve`, note ? { outcome, note } : { outcome }),
 }

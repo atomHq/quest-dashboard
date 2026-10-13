@@ -2,10 +2,14 @@
 
 export type ChallengeStatus = 'draft' | 'active' | 'closed' | 'judging' | 'completed' | 'cancelled'
 export type SubmissionType = 'video' | 'audio' | 'image' | 'written'
-export type ChallengeType = 'public' | 'direct'
+/** head_to_head: a private 1v1 staked match, served by /head-to-heads rather than /challenges. */
+export type ChallengeType = 'public' | 'direct' | 'head_to_head'
 export type WinnerSelection = 'creator' | 'community' | 'hybrid'
-/** creator_funded: the creator escrows the pool up front. entry_funded: each entrant pays entry_price from their wallet. */
-export type FundingType = 'creator_funded' | 'entry_funded'
+/**
+ * creator_funded: the creator escrows the pool up front. entry_funded: each entrant pays entry_price from their wallet.
+ * stake: a head-to-head match where both players stake entry_price.
+ */
+export type FundingType = 'creator_funded' | 'entry_funded' | 'stake'
 
 export interface Challenge {
   id: string
@@ -262,4 +266,106 @@ export interface UpdateChallengeInput {
   rules?: string | null
   max_participants?: number | null
   deadline?: string
+}
+
+// ---------------------------------------------------------------------------
+// Head-to-head matches
+// ---------------------------------------------------------------------------
+
+/**
+ * awaiting_opponent → in_play → settling → settled, or → disputed (an admin decides) → settling / refunded.
+ * refunded also covers declined, cancelled and timed-out matches.
+ */
+export type HeadToHeadState = 'awaiting_opponent' | 'in_play' | 'disputed' | 'settling' | 'settled' | 'refunded'
+export type HeadToHeadOutcome = 'creator' | 'opponent' | 'refund'
+export type MatchRole = 'creator' | 'opponent' | 'admin'
+
+export interface HeadToHead {
+  challenge_id: string
+  creator_id: string
+  opponent_id: string
+  /** Series length (best of 5 = 5); null for a single game or untracked score. */
+  best_of: number | null
+  state: HeadToHeadState
+  accepted_at: string | null
+  /** Results lock at this time: a lone report then stands, no report refunds both. */
+  report_by: string
+  disputed_at: string | null
+  /** Shown on disputed matches: upload evidence before an admin decides. */
+  evidence_by: string | null
+  winner_id: string | null
+  outcome: HeadToHeadOutcome | null
+  resolution_note: string | null
+  resolved_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface MatchPlayer {
+  id: string
+  username: string
+  avatar_url: string | null
+}
+
+export interface MatchReport {
+  challenge_id: string
+  reporter_id: string
+  winner_id: string
+  creator_score: number | null
+  opponent_score: number | null
+  created_at: string
+}
+
+export interface MatchEvidence {
+  id: string
+  uploader_id: string
+  media_type: 'image' | 'video'
+  content_type: string
+  url: string
+  created_at: string
+}
+
+/** Kobo. pot = 2 × stake; winner_takes = 2 × (stake − fee_per_stake). */
+export interface StakeSummary {
+  stake: number
+  fee_per_stake: number
+  pot: number
+  winner_takes: number
+}
+
+export interface MatchView {
+  challenge: Challenge
+  reward_tiers: RewardTier[]
+  head_to_head: HeadToHead
+  creator: MatchPlayer
+  opponent: MatchPlayer
+  reports: MatchReport[]
+  evidence: MatchEvidence[]
+  stake_summary: StakeSummary
+  my_role: MatchRole
+}
+
+export interface MatchListItem {
+  challenge: Challenge
+  head_to_head: HeadToHead
+  creator: MatchPlayer
+  opponent: MatchPlayer
+  stake_summary: StakeSummary
+  my_role: MatchRole
+}
+
+export interface CreateMatchInput {
+  opponent_username: string
+  title: string
+  rules?: string | null
+  best_of?: number | null
+  /** Kobo. */
+  stake: number
+  deadline: string
+}
+
+export interface ReportMatchInput {
+  winner_id: string
+  creator_score?: number | null
+  opponent_score?: number | null
 }

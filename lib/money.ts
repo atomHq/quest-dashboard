@@ -37,3 +37,8 @@ export function computeTotalCharge(poolKobo: number): number {
 export function tierAmount(poolKobo: number, percentage: number): number {
   return Math.floor((poolKobo * percentage) / 100)
 }
+
+/** What a head-to-head winner takes: both stakes minus the fee on each. Mirrors the backend's stake_summary. */
+export function matchWinnerTakes(stakeKobo: number): number {
+  return 2 * (stakeKobo - computeFee(stakeKobo))
+}

@@ -147,7 +147,7 @@ export function StepDetails({
 
 const SETTINGS_FIELDS = ['submission_type', 'challenge_type', 'winner_selection', 'max_participants', 'deadline'] as const
 
-function Choice<T extends string>({
+export function Choice<T extends string>({
   value,
   onChange,
   options,

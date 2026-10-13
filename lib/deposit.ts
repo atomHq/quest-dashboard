@@ -8,7 +8,7 @@ export interface PendingDeposit {
   amount: number
   /** wallet.available when the user left for Paystack, to detect the credit on return. */
   startAvailable: number
-  purpose: 'wallet' | 'challenge' | 'join'
+  purpose: 'wallet' | 'challenge' | 'join' | 'match'
   /** Where to send the user once the credit lands (e.g. back to the paid challenge they were joining). */
   returnTo?: string
   reference?: string
